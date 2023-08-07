@@ -29,7 +29,7 @@ console_error_panic_hook = "0.1.7"
 # like the DOM.
 [dependencies.web-sys]
 version = "0.3.55"
-features = ["console"]
+features = ["console", "Window", "Document", "HtmlCanvasElement", "CanvasRenderingContext2d", "Element"]
 
 # These crates are used for running unit tests.
 [dev-dependencies]
