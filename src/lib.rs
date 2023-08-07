@@ -1,7 +1,17 @@
+use rand::prelude::*;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
-fn draw_triangle(context: &web_sys::CanvasRenderingContext2d, points: [(f64, f64); 3]) {
+fn draw_triangle(
+    context: &web_sys::CanvasRenderingContext2d,
+    points: [(f64, f64); 3],
+    color: (u8, u8, u8),
+) {
+    context.set_fill_style(&wasm_bindgen::JsValue::from_str(&format!(
+        "rgb({}, {}, {})",
+        color.0, color.1, color.2
+    )));
+
     let [(top_x, top_y), (left_x, left_y), (right_x, right_y)] = points;
     context.move_to(top_x, top_y);
     context.begin_path();
@@ -10,20 +20,48 @@ fn draw_triangle(context: &web_sys::CanvasRenderingContext2d, points: [(f64, f64
     context.line_to(top_x, top_y);
     context.close_path();
     context.stroke();
+    context.fill();
 }
 
-fn sierpinski(context: &web_sys::CanvasRenderingContext2d, points: [(f64, f64); 3], depth: u8) {
-    if depth == 0 {
-        draw_triangle(context, points);
-    } else {
+fn sierpinski(
+    context: &web_sys::CanvasRenderingContext2d,
+    points: [(f64, f64); 3],
+    color: (u8, u8, u8),
+    depth: u8,
+) {
+    draw_triangle(context, points, color);
+    if depth > 0 {
         let midpoint = |(px, py), (qx, qy)| ((px + qx) / 2.0, (py + qy) / 2.0);
+
+        let mut rng = thread_rng();
+        let next_color = (
+            rng.gen_range(0..255),
+            rng.gen_range(0..255),
+            rng.gen_range(0..255),
+        );
+
         let [top, left, right] = points;
         let left_middle = midpoint(top, left);
         let right_middle = midpoint(top, right);
         let bottom_middle = midpoint(left, right);
-        sierpinski(context, [top, left_middle, right_middle], depth - 1);
-        sierpinski(context, [left_middle, left, bottom_middle], depth - 1);
-        sierpinski(context, [right_middle, bottom_middle, right], depth - 1);
+        sierpinski(
+            context,
+            [top, left_middle, right_middle],
+            next_color,
+            depth - 1,
+        );
+        sierpinski(
+            context,
+            [left_middle, left, bottom_middle],
+            next_color,
+            depth - 1,
+        );
+        sierpinski(
+            context,
+            [right_middle, bottom_middle, right],
+            next_color,
+            depth - 1,
+        );
     }
 }
 
@@ -46,6 +84,11 @@ pub fn main_js() -> Result<(), JsValue> {
         .dyn_into::<web_sys::CanvasRenderingContext2d>()
         .unwrap();
 
-    sierpinski(&context, [(300.0, 0.0), (0.0, 600.0), (600.0, 600.0)], 5);
+    sierpinski(
+        &context,
+        [(300.0, 0.0), (0.0, 600.0), (600.0, 600.0)],
+        (0, 255, 0),
+        5,
+    );
     Ok(())
 }
