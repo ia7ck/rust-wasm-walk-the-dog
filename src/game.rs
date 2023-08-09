@@ -81,6 +81,11 @@ impl Game for WalkTheDog {
         self.position.x += verocity.x;
         self.position.y += verocity.y;
 
+        // この関数は 1/60 秒 = 16.777... ミリ秒ごとに呼ばれる
+        // ちょうどいい速さに見せるために Run (k).png -> Run (k+1).png の間隔は 50 ミリ秒程度にしたい
+        // ざっくり 3 回呼ばれたら k が 1 進むようにすればいい
+        // frame 0 ～ frame 2 では Run (1).png を、frame 3 ～ frame 5 では Run (2).png を、……
+        // frame 21 ～ frame 23 では Run (8).png を描画することに決める
         if self.frame < 23 {
             self.frame += 1;
         } else {
