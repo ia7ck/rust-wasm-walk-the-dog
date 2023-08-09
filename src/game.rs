@@ -7,10 +7,12 @@ use web_sys::HtmlImageElement;
 
 use crate::{
     browser,
-    engine::{self, Game, KeyState, Point, Rect, Renderer},
+    engine::{self, Game, KeyState, Rect, Renderer},
 };
 
-#[derive(Deserialize)]
+use self::red_hat_boy_states::*;
+
+#[derive(Deserialize, Clone)]
 struct SheetRect {
     x: i16,
     y: i16,
@@ -18,31 +20,136 @@ struct SheetRect {
     h: i16,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 struct Cell {
     frame: SheetRect,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Sheet {
     frames: HashMap<String, Cell>,
 }
 
+const IDLE_FRAMES: u8 = 29;
+const RUNNING_FRAMES: u8 = 23;
+
+const RUNNING_SPEED: i16 = 3;
+
+#[derive(Copy, Clone)]
+enum RedHatBoyStateMachine {
+    Idle(RedHatBoyState<Idle>),
+    Running(RedHatBoyState<Running>),
+}
+
+impl RedHatBoyStateMachine {
+    fn update(self) -> Self {
+        match self {
+            RedHatBoyStateMachine::Idle(mut state) => {
+                state.update();
+                RedHatBoyStateMachine::Idle(state)
+            }
+            RedHatBoyStateMachine::Running(mut state) => {
+                state.update();
+                RedHatBoyStateMachine::Running(state)
+            }
+        }
+    }
+}
+
+impl From<RedHatBoyState<Running>> for RedHatBoyStateMachine {
+    fn from(state: RedHatBoyState<Running>) -> Self {
+        RedHatBoyStateMachine::Running(state)
+    }
+}
+
+pub enum Event {
+    Run,
+}
+
+impl RedHatBoyStateMachine {
+    fn transition(self, event: Event) -> Self {
+        match (self, event) {
+            (RedHatBoyStateMachine::Idle(state), Event::Run) => state.run().into(),
+            _ => self,
+        }
+    }
+
+    fn frame_name(&self) -> &str {
+        match self {
+            RedHatBoyStateMachine::Idle(state) => state.frame_name(),
+            RedHatBoyStateMachine::Running(state) => state.frame_name(),
+        }
+    }
+
+    fn context(&self) -> &RedHatBoyContext {
+        match self {
+            RedHatBoyStateMachine::Idle(state) => &state.context(),
+            RedHatBoyStateMachine::Running(state) => &state.context(),
+        }
+    }
+}
+
+struct RedHatBoy {
+    state_machine: RedHatBoyStateMachine,
+    sprite_sheet: Sheet,
+    image: HtmlImageElement,
+}
+
+impl RedHatBoy {
+    fn new(sheet: Sheet, image: HtmlImageElement) -> Self {
+        Self {
+            state_machine: RedHatBoyStateMachine::Idle(RedHatBoyState::new()),
+            sprite_sheet: sheet,
+            image,
+        }
+    }
+
+    fn update(&mut self) {
+        self.state_machine = self.state_machine.update();
+    }
+
+    fn draw(&self, renderer: &Renderer) {
+        let frame_name = format!(
+            "{} ({}).png",
+            self.state_machine.frame_name(),
+            (self.state_machine.context().frame / 3) + 1
+        );
+
+        let sprite = self
+            .sprite_sheet
+            .frames
+            .get(&frame_name)
+            .expect("Cell not found");
+
+        renderer.draw_image(
+            &self.image,
+            &Rect {
+                x: sprite.frame.x.into(),
+                y: sprite.frame.y.into(),
+                width: sprite.frame.w.into(),
+                height: sprite.frame.h.into(),
+            },
+            &Rect {
+                x: self.state_machine.context().position.x.into(),
+                y: self.state_machine.context().position.y.into(),
+                width: sprite.frame.w.into(),
+                height: sprite.frame.h.into(),
+            },
+        );
+    }
+
+    fn run_right(&mut self) {
+        self.state_machine = self.state_machine.transition(Event::Run);
+    }
+}
+
 pub struct WalkTheDog {
-    image: Option<HtmlImageElement>,
-    sheet: Option<Sheet>,
-    frame: u8,
-    position: Point,
+    rhb: Option<RedHatBoy>,
 }
 
 impl WalkTheDog {
     pub fn new() -> Self {
-        WalkTheDog {
-            image: None,
-            sheet: None,
-            frame: 0,
-            position: Point { x: 0, y: 0 },
-        }
+        WalkTheDog { rhb: None }
     }
 }
 
@@ -57,72 +164,123 @@ impl Game for WalkTheDog {
                 anyhow!("{:?}", err))?;
         let image = engine::load_image("rhb.png").await?;
         Ok(Box::new(WalkTheDog {
-            image: Some(image),
-            sheet: Some(sheet),
-            position: self.position,
-            frame: self.frame,
+            rhb: Some(RedHatBoy::new(sheet, image)),
         }))
     }
 
     fn update(&mut self, keystate: &KeyState) {
-        let mut verocity = Point { x: 0, y: 0 };
-        if keystate.is_pressed("ArrowDown") {
-            verocity.y += 3;
-        }
-        if keystate.is_pressed("ArrowUp") {
-            verocity.y -= 3;
-        }
         if keystate.is_pressed("ArrowRight") {
-            verocity.x += 3;
+            self.rhb.as_mut().unwrap().run_right();
         }
-        if keystate.is_pressed("ArrowLeft") {
-            verocity.x -= 3;
-        }
-        self.position.x += verocity.x;
-        self.position.y += verocity.y;
-
-        // この関数は 1/60 秒 = 16.777... ミリ秒ごとに呼ばれる
-        // ちょうどいい速さに見せるために Run (k).png -> Run (k+1).png の間隔は 50 ミリ秒程度にしたい
-        // ざっくり 3 回呼ばれたら k が 1 進むようにすればいい
-        // frame 0 ～ frame 2 では Run (1).png を、frame 3 ～ frame 5 では Run (2).png を、……
-        // frame 21 ～ frame 23 では Run (8).png を描画することに決める
-        if self.frame < 23 {
-            self.frame += 1;
-        } else {
-            self.frame = 0;
-        }
+        self.rhb.as_mut().unwrap().update();
     }
 
     fn draw(&self, renderer: &Renderer) {
-        let current_sprite = (self.frame / 3) + 1;
-        let frame_name = format!("Run ({}).png", current_sprite);
-        let sprite = self
-            .sheet
-            .as_ref()
-            .and_then(|sheet| sheet.frames.get(&frame_name))
-            .expect("Cell not found");
         renderer.clear(&Rect {
             x: 0.0,
             y: 0.0,
             width: 600.0,
             height: 600.0,
         });
-        self.image.as_ref().map(|image| {
-            renderer.draw_image(
-                &image,
-                &Rect {
-                    x: sprite.frame.x.into(),
-                    y: sprite.frame.y.into(),
-                    width: sprite.frame.w.into(),
-                    height: sprite.frame.h.into(),
+        self.rhb.as_ref().unwrap().draw(renderer);
+    }
+}
+
+mod red_hat_boy_states {
+    use crate::engine::Point;
+
+    use crate::game::{IDLE_FRAMES, RUNNING_FRAMES, RUNNING_SPEED};
+
+    const FLOOR: i16 = 475;
+
+    const IDLE_FRAME_NAME: &str = "Idle";
+    const RUN_FRAME_NAME: &str = "Run";
+
+    #[derive(Copy, Clone)]
+    pub struct RedHatBoyContext {
+        pub frame: u8,
+        pub position: Point,
+        pub velocity: Point,
+    }
+
+    impl RedHatBoyContext {
+        pub fn update(mut self, frame_count: u8) -> Self {
+            if self.frame < frame_count {
+                self.frame += 1;
+            } else {
+                self.frame = 0;
+            }
+
+            self.position.x += self.velocity.x;
+            self.position.y += self.velocity.y;
+
+            self
+        }
+
+        fn reset_frame(mut self) -> Self {
+            self.frame = 0;
+            self
+        }
+
+        fn run_right(mut self) -> Self {
+            self.velocity.x += RUNNING_SPEED;
+            self
+        }
+    }
+
+    #[derive(Copy, Clone)]
+    pub struct RedHatBoyState<S> {
+        context: RedHatBoyContext,
+        _state: S,
+    }
+
+    impl<S> RedHatBoyState<S> {
+        pub fn context(&self) -> &RedHatBoyContext {
+            &self.context
+        }
+    }
+
+    #[derive(Copy, Clone)]
+    pub struct Idle;
+
+    impl RedHatBoyState<Idle> {
+        pub fn new() -> Self {
+            Self {
+                context: RedHatBoyContext {
+                    frame: 0,
+                    position: Point { x: 0, y: FLOOR },
+                    velocity: Point { x: 0, y: 0 },
                 },
-                &Rect {
-                    x: self.position.x.into(),
-                    y: self.position.y.into(),
-                    width: sprite.frame.w.into(),
-                    height: sprite.frame.h.into(),
-                },
-            );
-        });
+                _state: Idle {},
+            }
+        }
+
+        pub fn frame_name(&self) -> &str {
+            IDLE_FRAME_NAME
+        }
+
+        pub fn update(&mut self) {
+            self.context = self.context.update(IDLE_FRAMES);
+        }
+
+        pub fn run(self) -> RedHatBoyState<Running> {
+            RedHatBoyState {
+                context: self.context.reset_frame().run_right(),
+                _state: Running {},
+            }
+        }
+    }
+
+    #[derive(Copy, Clone)]
+    pub struct Running;
+
+    impl RedHatBoyState<Running> {
+        pub fn frame_name(&self) -> &str {
+            RUN_FRAME_NAME
+        }
+
+        pub fn update(&mut self) {
+            self.context = self.context.update(RUNNING_FRAMES);
+        }
     }
 }
