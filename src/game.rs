@@ -146,6 +146,9 @@ impl RedHatBoyStateMachine {
             (RedHatBoyStateMachine::Running(state), Event::Land(position)) => {
                 state.land_on(position).into()
             }
+            (RedHatBoyStateMachine::Sliding(state), Event::Land(position)) => {
+                state.land_on(position).into()
+            }
             (RedHatBoyStateMachine::Jumping(state), Event::Land(position)) => {
                 state.land_on(position).into()
             }
@@ -605,6 +608,13 @@ mod red_hat_boy_states {
             RedHatBoyState {
                 context: self.context.reset_frame().stop(),
                 _state: Falling {},
+            }
+        }
+
+        pub fn land_on(self, position: f32) -> RedHatBoyState<Sliding> {
+            RedHatBoyState {
+                context: self.context.set_on(position as i16),
+                _state: Sliding {},
             }
         }
     }
