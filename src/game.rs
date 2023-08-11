@@ -278,6 +278,7 @@ mod red_hat_boy_states {
                 self.frame = 0;
             }
 
+            // velocity.y が i16 に収まらなくなりそう
             self.velocity.y += GRAVITY;
 
             self.position.x += self.velocity.x;
