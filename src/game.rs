@@ -152,22 +152,31 @@ impl RedHatBoy {
         }
     }
 
-    fn update(&mut self) {
-        self.state_machine = self.state_machine.update();
-    }
-
-    fn draw(&self, renderer: &Renderer) {
-        let frame_name = format!(
+    fn frame_name(&self) -> String {
+        format!(
             "{} ({}).png",
             self.state_machine.frame_name(),
             (self.state_machine.context().frame / 3) + 1
-        );
+        )
+    }
 
-        let sprite = self
-            .sprite_sheet
-            .frames
-            .get(&frame_name)
-            .expect("Cell not found");
+    fn current_sprite(&self) -> Option<&Cell> {
+        self.sprite_sheet.frames.get(&self.frame_name())
+    }
+
+    fn bounding_box(&self) -> Rect {
+        let sprite = self.current_sprite().expect("Cell not found");
+
+        Rect {
+            x: (self.state_machine.context().position.x + sprite.sprite_source_size.x).into(),
+            y: (self.state_machine.context().position.y + sprite.sprite_source_size.y).into(),
+            width: sprite.frame.w.into(),
+            height: sprite.frame.h.into(),
+        }
+    }
+
+    fn draw(&self, renderer: &Renderer) {
+        let sprite = self.current_sprite().expect("Cell not found");
 
         renderer.draw_image(
             &self.image,
@@ -177,15 +186,14 @@ impl RedHatBoy {
                 width: sprite.frame.w.into(),
                 height: sprite.frame.h.into(),
             },
-            &Rect {
-                x: (self.state_machine.context().position.x + sprite.sprite_source_size.x as i16)
-                    .into(),
-                y: (self.state_machine.context().position.y + sprite.sprite_source_size.y as i16)
-                    .into(),
-                width: sprite.frame.w.into(),
-                height: sprite.frame.h.into(),
-            },
+            &self.bounding_box(),
         );
+
+        renderer.draw_rect(&self.bounding_box());
+    }
+
+    fn update(&mut self) {
+        self.state_machine = self.state_machine.update();
     }
 
     fn run_right(&mut self) {
@@ -258,6 +266,7 @@ impl Game for WalkTheDog {
             walk.background.draw(renderer);
             walk.boy.draw(renderer);
             walk.stone.draw(renderer);
+            renderer.draw_rect(walk.stone.bounding_box());
         }
     }
 }
