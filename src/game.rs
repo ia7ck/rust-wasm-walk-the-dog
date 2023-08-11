@@ -200,6 +200,14 @@ impl RedHatBoy {
         }
     }
 
+    fn pos_y(&self) -> i16 {
+        self.state_machine.context().position.y
+    }
+
+    fn velocity_y(&self) -> i16 {
+        self.state_machine.context().velocity.y
+    }
+
     fn frame_name(&self) -> String {
         format!(
             "{} ({}).png",
@@ -321,7 +329,12 @@ impl Game for WalkTheDog {
                 .bounding_box()
                 .intersects(&walk.platform.bounding_box())
             {
-                walk.boy.land_on(walk.platform.bounding_box().y);
+                if walk.boy.velocity_y() > 0 && walk.boy.pos_y() < walk.platform.position.y {
+                    // rhb が下降中 && rhb が platform より上にいる
+                    walk.boy.land_on(walk.platform.bounding_box().y);
+                } else {
+                    walk.boy.knock_out();
+                }
             }
 
             if walk
