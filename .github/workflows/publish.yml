@@ -18,7 +18,9 @@ jobs:
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Build
-        run: npm run build
+        run: |
+          npm clean-install
+          npm run build
 
       - name: Publish to Cloudflare Pages
         uses: cloudflare/pages-action@v1
