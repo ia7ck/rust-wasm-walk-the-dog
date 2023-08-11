@@ -14,6 +14,10 @@ use self::red_hat_boy_states::*;
 
 const HEIGHT: i16 = 600;
 
+const LOW_PLATFORM: i16 = 420;
+#[allow(unused)]
+const HIGH_PLATFORM: i16 = 375;
+
 pub enum WalkTheDog {
     Loading,
     Loaded(Walk),
@@ -310,7 +314,10 @@ impl Game for WalkTheDog {
                 let platform = Platform::new(
                     serde_wasm_bindgen::from_value(json).map_err(|err| anyhow!("{:?}", err))?,
                     engine::load_image("tiles.png").await?,
-                    Point { x: 200, y: 400 },
+                    Point {
+                        x: 370,
+                        y: LOW_PLATFORM,
+                    },
                 );
                 let image = engine::load_image("rhb.png").await?;
                 let rhb = RedHatBoy::new(sheet, image);
@@ -472,7 +479,7 @@ mod red_hat_boy_states {
     const JUMPING_FRAMES: u8 = 35;
     const FALLING_FRAMES: u8 = 29;
 
-    const RUNNING_SPEED: i16 = 3;
+    const RUNNING_SPEED: i16 = 4;
     const JUMP_SPEED: i16 = -25;
     const GRAVITY: i16 = 1;
     const TERMINAL_VELOCITY: i16 = 20;
