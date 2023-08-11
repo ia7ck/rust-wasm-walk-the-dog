@@ -542,7 +542,7 @@ mod red_hat_boy_states {
 
         fn stop(mut self) -> Self {
             self.velocity.x = 0;
-            self.velocity.y = 0; // ジャンプして上昇中に岩にあたると空中で横たわって変になるのでy方向の速度も0にしておく
+            self.velocity.y = 0; // ジャンプして上昇中に岩/浮き台にあたると空中で横たわって変になるのでy方向の速度も0にしておく
             self
         }
 
