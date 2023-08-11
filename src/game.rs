@@ -220,7 +220,7 @@ impl RedHatBoy {
         self.sprite_sheet.frames.get(&self.frame_name())
     }
 
-    fn bounding_box(&self) -> Rect {
+    fn destination_box(&self) -> Rect {
         let sprite = self.current_sprite().expect("Cell not found");
 
         Rect {
@@ -229,6 +229,20 @@ impl RedHatBoy {
             width: sprite.frame.w.into(),
             height: sprite.frame.h.into(),
         }
+    }
+
+    // 衝突判定が自然に見えるように実際より小さめの bounding box を返す
+    fn bounding_box(&self) -> Rect {
+        const X_OFFSET: f32 = 18.0;
+        const Y_OFFSET: f32 = 14.0;
+        const WIDTH_OFFSET: f32 = 28.0;
+
+        let mut bounding_box = self.destination_box();
+        bounding_box.x += X_OFFSET;
+        bounding_box.width -= WIDTH_OFFSET;
+        bounding_box.y += Y_OFFSET;
+        bounding_box.height -= Y_OFFSET;
+        bounding_box
     }
 
     fn draw(&self, renderer: &Renderer) {
@@ -242,10 +256,10 @@ impl RedHatBoy {
                 width: sprite.frame.w.into(),
                 height: sprite.frame.h.into(),
             },
-            &self.bounding_box(),
+            &self.destination_box(),
         );
 
-        renderer.draw_rect(&self.bounding_box());
+        renderer.draw_rect(&&self.bounding_box());
     }
 
     fn update(&mut self) {
