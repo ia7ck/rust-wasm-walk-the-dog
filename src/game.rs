@@ -12,12 +12,20 @@ use crate::{
 
 use self::red_hat_boy_states::*;
 
+pub enum WalkTheDog {
+    Loading,
+    Loaded(RedHatBoy),
+}
+
+pub struct RedHatBoy {
+    state_machine: RedHatBoyStateMachine,
+    sprite_sheet: Sheet,
+    image: HtmlImageElement,
+}
+
 #[derive(Deserialize)]
-struct SheetRect {
-    x: i16,
-    y: i16,
-    w: i16,
-    h: i16,
+pub struct Sheet {
+    frames: HashMap<String, Cell>,
 }
 
 #[derive(Deserialize)]
@@ -26,8 +34,11 @@ struct Cell {
 }
 
 #[derive(Deserialize)]
-pub struct Sheet {
-    frames: HashMap<String, Cell>,
+struct SheetRect {
+    x: i16,
+    y: i16,
+    w: i16,
+    h: i16,
 }
 
 #[derive(Copy, Clone)]
@@ -36,6 +47,13 @@ enum RedHatBoyStateMachine {
     Running(RedHatBoyState<Running>),
     Sliding(RedHatBoyState<Sliding>),
     Jumping(RedHatBoyState<Jumping>),
+}
+
+pub enum Event {
+    Run,
+    Slide,
+    Update,
+    Jump,
 }
 
 impl From<RedHatBoyState<Idle>> for RedHatBoyStateMachine {
@@ -80,13 +98,6 @@ impl From<JumpingEndState> for RedHatBoyStateMachine {
     }
 }
 
-pub enum Event {
-    Run,
-    Slide,
-    Update,
-    Jump,
-}
-
 impl RedHatBoyStateMachine {
     fn transition(self, event: Event) -> Self {
         match (self, event) {
@@ -122,12 +133,6 @@ impl RedHatBoyStateMachine {
     fn update(self) -> Self {
         self.transition(Event::Update)
     }
-}
-
-pub struct RedHatBoy {
-    state_machine: RedHatBoyStateMachine,
-    sprite_sheet: Sheet,
-    image: HtmlImageElement,
 }
 
 impl RedHatBoy {
@@ -184,11 +189,6 @@ impl RedHatBoy {
     fn jump(&mut self) {
         self.state_machine = self.state_machine.transition(Event::Jump);
     }
-}
-
-pub enum WalkTheDog {
-    Loading,
-    Loaded(RedHatBoy),
 }
 
 impl WalkTheDog {
@@ -264,6 +264,12 @@ mod red_hat_boy_states {
     const JUMPING_FRAME_NAME: &str = "Jump";
 
     #[derive(Copy, Clone)]
+    pub struct RedHatBoyState<S> {
+        context: RedHatBoyContext,
+        _state: S,
+    }
+
+    #[derive(Copy, Clone)]
     pub struct RedHatBoyContext {
         pub frame: u8,
         pub position: Point,
@@ -305,12 +311,6 @@ mod red_hat_boy_states {
             self.velocity.y = JUMP_SPEED;
             self
         }
-    }
-
-    #[derive(Copy, Clone)]
-    pub struct RedHatBoyState<S> {
-        context: RedHatBoyContext,
-        _state: S,
     }
 
     impl<S> RedHatBoyState<S> {
