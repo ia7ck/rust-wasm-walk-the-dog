@@ -12,7 +12,7 @@ use crate::{
 
 use self::red_hat_boy_states::*;
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize)]
 struct SheetRect {
     x: i16,
     y: i16,
@@ -20,12 +20,12 @@ struct SheetRect {
     h: i16,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize)]
 struct Cell {
     frame: SheetRect,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize)]
 pub struct Sheet {
     frames: HashMap<String, Cell>,
 }
