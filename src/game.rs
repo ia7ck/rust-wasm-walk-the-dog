@@ -338,16 +338,14 @@ impl Game for WalkTheDog {
             }
             walk.boy.update();
 
-            if walk
-                .boy
-                .bounding_box()
-                .intersects(&walk.platform.bounding_box())
-            {
-                if walk.boy.velocity_y() > 0 && walk.boy.pos_y() < walk.platform.position.y {
-                    // rhb が下降中 && rhb が platform より上にいる
-                    walk.boy.land_on(walk.platform.bounding_box().y);
-                } else {
-                    walk.boy.knock_out();
+            for bouding_box in &walk.platform.bounding_boxes() {
+                if walk.boy.bounding_box().intersects(bouding_box) {
+                    if walk.boy.velocity_y() > 0 && walk.boy.pos_y() < walk.platform.position.y {
+                        // rhb が下降中 && rhb が platform より上にいる
+                        walk.boy.land_on(bouding_box.y);
+                    } else {
+                        walk.boy.knock_out();
+                    }
                 }
             }
 
@@ -374,7 +372,9 @@ impl Game for WalkTheDog {
             walk.stone.draw(renderer);
             renderer.draw_rect(walk.stone.bounding_box());
             walk.platform.draw(renderer);
-            renderer.draw_rect(&walk.platform.bounding_box());
+            for bounding_box in &walk.platform.bounding_boxes() {
+                renderer.draw_rect(&bounding_box);
+            }
         }
     }
 }
@@ -394,7 +394,7 @@ impl Platform {
         }
     }
 
-    fn bounding_box(&self) -> Rect {
+    fn destination_box(&self) -> Rect {
         let platform = self
             .sheet
             .frames
@@ -407,6 +407,34 @@ impl Platform {
             width: (platform.frame.w * 3).into(),
             height: platform.frame.h.into(),
         }
+    }
+
+    fn bounding_boxes(&self) -> Vec<Rect> {
+        const X_OFFSET: f32 = 60.0;
+        const END_HEIGHT: f32 = 54.0;
+
+        let destination_box = self.destination_box();
+
+        vec![
+            Rect {
+                x: destination_box.x,
+                y: destination_box.y,
+                width: X_OFFSET,
+                height: END_HEIGHT,
+            },
+            Rect {
+                x: destination_box.x + X_OFFSET,
+                y: destination_box.y,
+                width: destination_box.width - (X_OFFSET * 2.0),
+                height: destination_box.height,
+            },
+            Rect {
+                x: destination_box.x + destination_box.width - X_OFFSET,
+                y: destination_box.y,
+                width: X_OFFSET,
+                height: END_HEIGHT,
+            },
+        ]
     }
 
     fn draw(&self, renderer: &Renderer) {
@@ -425,7 +453,7 @@ impl Platform {
                 width: (platform.frame.w * 3).into(),
                 height: platform.frame.h.into(),
             },
-            &self.bounding_box(),
+            &self.destination_box(),
         );
     }
 }
