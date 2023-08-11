@@ -401,7 +401,7 @@ mod red_hat_boy_states {
             }
         }
 
-        pub fn stand(self) -> RedHatBoyState<Running> {
+        fn stand(self) -> RedHatBoyState<Running> {
             RedHatBoyState {
                 context: self.context.reset_frame(),
                 _state: Running {},
@@ -431,7 +431,7 @@ mod red_hat_boy_states {
             }
         }
 
-        pub fn land(self) -> RedHatBoyState<Running> {
+        fn land(self) -> RedHatBoyState<Running> {
             RedHatBoyState {
                 context: self.context.reset_frame(),
                 _state: Running {},
