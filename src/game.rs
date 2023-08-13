@@ -345,11 +345,11 @@ impl Game for WalkTheDog {
             }
             walk.boy.update();
 
-            for bouding_box in &walk.platform.bounding_boxes() {
-                if walk.boy.bounding_box().intersects(bouding_box) {
+            for bounding_box in &walk.platform.bounding_boxes() {
+                if walk.boy.bounding_box().intersects(bounding_box) {
                     if walk.boy.velocity_y() > 0 && walk.boy.pos_y() < walk.platform.position.y {
                         // rhb が下降中 && rhb が platform より上にいる
-                        walk.boy.land_on(bouding_box.y);
+                        walk.boy.land_on(bounding_box.y);
                     } else {
                         walk.boy.knock_out();
                     }
