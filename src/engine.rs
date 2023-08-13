@@ -19,7 +19,7 @@ pub struct Rect {
 }
 
 impl Rect {
-    pub fn new(position: Point, width: i16, height: i16) -> Self {
+    pub const fn new(position: Point, width: i16, height: i16) -> Self {
         Rect {
             position,
             width,
@@ -27,7 +27,7 @@ impl Rect {
         }
     }
 
-    pub fn new_from_x_y(x: i16, y: i16, width: i16, height: i16) -> Self {
+    pub const fn new_from_x_y(x: i16, y: i16, width: i16, height: i16) -> Self {
         Rect::new(Point { x, y }, width, height)
     }
 
@@ -302,14 +302,14 @@ pub struct Sheet {
     pub frames: HashMap<String, Cell>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Cell {
     pub frame: SheetRect,
     pub sprite_source_size: SheetRect,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct SheetRect {
     pub x: i16,
     pub y: i16,
