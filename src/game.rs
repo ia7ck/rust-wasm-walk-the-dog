@@ -231,12 +231,12 @@ impl RedHatBoy {
     fn destination_box(&self) -> Rect {
         let sprite = self.current_sprite().expect("Cell not found");
 
-        Rect {
-            x: (self.state_machine.context().position.x + sprite.sprite_source_size.x).into(),
-            y: (self.state_machine.context().position.y + sprite.sprite_source_size.y).into(),
-            width: sprite.frame.w.into(),
-            height: sprite.frame.h.into(),
-        }
+        Rect::new_from_x_y(
+            (self.state_machine.context().position.x + sprite.sprite_source_size.x).into(),
+            (self.state_machine.context().position.y + sprite.sprite_source_size.y).into(),
+            sprite.frame.w.into(),
+            sprite.frame.h.into(),
+        )
     }
 
     // 衝突判定が自然に見えるように実際より小さめの bounding box を返す
@@ -245,12 +245,12 @@ impl RedHatBoy {
         const Y_OFFSET: i16 = 14;
         const WIDTH_OFFSET: i16 = 28;
 
-        let mut bounding_box = self.destination_box();
-        bounding_box.x += X_OFFSET;
-        bounding_box.width -= WIDTH_OFFSET;
-        bounding_box.y += Y_OFFSET;
-        bounding_box.height -= Y_OFFSET;
-        bounding_box
+        Rect::new_from_x_y(
+            self.destination_box().x() + X_OFFSET,
+            self.destination_box().y() + Y_OFFSET,
+            self.destination_box().width - WIDTH_OFFSET,
+            self.destination_box().height - Y_OFFSET,
+        )
     }
 
     fn draw(&self, renderer: &Renderer) {
@@ -258,12 +258,12 @@ impl RedHatBoy {
 
         renderer.draw_image(
             &self.image,
-            &Rect {
-                x: sprite.frame.x.into(),
-                y: sprite.frame.y.into(),
-                width: sprite.frame.w.into(),
-                height: sprite.frame.h.into(),
-            },
+            &Rect::new_from_x_y(
+                sprite.frame.x.into(),
+                sprite.frame.y.into(),
+                sprite.frame.w.into(),
+                sprite.frame.h.into(),
+            ),
             &self.destination_box(),
         );
 
@@ -376,7 +376,7 @@ impl Game for WalkTheDog {
                 if walk.boy.bounding_box().intersects(bounding_box) {
                     if walk.boy.velocity_y() > 0 && walk.boy.pos_y() < walk.platform.position.y {
                         // rhb が下降中 && rhb が platform より上にいる
-                        walk.boy.land_on(bounding_box.y);
+                        walk.boy.land_on(bounding_box.y());
                     } else {
                         walk.boy.knock_out();
                     }
@@ -394,12 +394,7 @@ impl Game for WalkTheDog {
     }
 
     fn draw(&self, renderer: &Renderer) {
-        renderer.clear(&Rect {
-            x: 0,
-            y: 0,
-            width: 600,
-            height: 600,
-        });
+        renderer.clear(&Rect::new_from_x_y(0, 0, 600, 600));
         if let WalkTheDog::Loaded(walk) = self {
             for background in &walk.backgrounds {
                 background.draw(renderer);
@@ -443,12 +438,11 @@ impl Platform {
             .get("13.png")
             .expect("13.png does not exist");
 
-        Rect {
-            x: self.position.x.into(),
-            y: self.position.y.into(),
-            width: (platform.frame.w * 3).into(),
-            height: platform.frame.h.into(),
-        }
+        Rect::new(
+            self.position,
+            (platform.frame.w * 3).into(),
+            platform.frame.h.into(),
+        )
     }
 
     fn bounding_boxes(&self) -> Vec<Rect> {
@@ -458,24 +452,24 @@ impl Platform {
         let destination_box = self.destination_box();
 
         vec![
-            Rect {
-                x: destination_box.x,
-                y: destination_box.y,
-                width: X_OFFSET,
-                height: END_HEIGHT,
-            },
-            Rect {
-                x: destination_box.x + X_OFFSET,
-                y: destination_box.y,
-                width: destination_box.width - (X_OFFSET * 2),
-                height: destination_box.height,
-            },
-            Rect {
-                x: destination_box.x + destination_box.width - X_OFFSET,
-                y: destination_box.y,
-                width: X_OFFSET,
-                height: END_HEIGHT,
-            },
+            Rect::new_from_x_y(
+                destination_box.x(),
+                destination_box.y(),
+                X_OFFSET,
+                END_HEIGHT,
+            ),
+            Rect::new_from_x_y(
+                destination_box.x() + X_OFFSET,
+                destination_box.y(),
+                destination_box.width - (X_OFFSET * 2),
+                destination_box.height,
+            ),
+            Rect::new_from_x_y(
+                destination_box.x() + destination_box.width - X_OFFSET,
+                destination_box.y(),
+                X_OFFSET,
+                END_HEIGHT,
+            ),
         ]
     }
 
@@ -489,12 +483,12 @@ impl Platform {
         // !! 3つのタイルがたまたま横並びになってるのでこれでよい
         renderer.draw_image(
             &self.image,
-            &Rect {
-                x: platform.frame.x.into(),
-                y: platform.frame.y.into(),
-                width: (platform.frame.w * 3).into(),
-                height: platform.frame.h.into(),
-            },
+            &Rect::new_from_x_y(
+                platform.frame.x.into(),
+                platform.frame.y.into(),
+                (platform.frame.w * 3).into(),
+                platform.frame.h.into(),
+            ),
             &self.destination_box(),
         );
     }
