@@ -5,6 +5,8 @@ description = "Walk the Dog - the game for the Rust Games with WebAssembly book"
 version = "0.0.0"
 authors = ["ia7ck <23146842+ia7ck@users.noreply.github.com>"]
 edition = "2021"
+license = "MIT"
+repository = "https://github.com/ia7ck/rust-wasm-walk-the-dog"
 
 [lib]
 crate-type = ["cdylib"]
