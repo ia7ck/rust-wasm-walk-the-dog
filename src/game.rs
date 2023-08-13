@@ -1,13 +1,10 @@
-use std::collections::HashMap;
-
 use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
-use serde::Deserialize;
 use web_sys::HtmlImageElement;
 
 use crate::{
     browser,
-    engine::{self, Game, Image, KeyState, Point, Rect, Renderer},
+    engine::{self, Cell, Game, Image, KeyState, Point, Rect, Renderer, Sheet, SpriteSheet},
 };
 
 use self::red_hat_boy_states::*;
@@ -33,26 +30,6 @@ pub struct RedHatBoy {
     state_machine: RedHatBoyStateMachine,
     sprite_sheet: Sheet,
     image: HtmlImageElement,
-}
-
-#[derive(Deserialize)]
-pub struct Sheet {
-    frames: HashMap<String, Cell>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Cell {
-    frame: SheetRect,
-    sprite_source_size: SheetRect,
-}
-
-#[derive(Deserialize)]
-struct SheetRect {
-    x: i16,
-    y: i16,
-    w: i16,
-    h: i16,
 }
 
 #[derive(Copy, Clone)]
@@ -315,8 +292,10 @@ impl Game for WalkTheDog {
                 let stone = engine::load_image("Stone.png").await?;
                 let json = browser::fetch_json("tiles.json").await?;
                 let platform = Platform::new(
-                    serde_wasm_bindgen::from_value(json).map_err(|err| anyhow!("{:?}", err))?,
-                    engine::load_image("tiles.png").await?,
+                    SpriteSheet::new(
+                        serde_wasm_bindgen::from_value(json).map_err(|err| anyhow!("{:?}", err))?,
+                        engine::load_image("tiles.png").await?,
+                    ),
                     Point {
                         x: 370,
                         y: LOW_PLATFORM,
@@ -409,8 +388,7 @@ pub trait Obstacle {
 }
 
 struct Platform {
-    sheet: Sheet,
-    image: HtmlImageElement,
+    sheet: SpriteSheet,
     position: Point,
 }
 
@@ -430,15 +408,11 @@ impl Obstacle for Platform {
     }
 
     fn draw(&self, renderer: &Renderer) {
-        let platform = self
-            .sheet
-            .frames
-            .get("13.png")
-            .expect("13.png does not exist");
+        let platform = self.sheet.cell("13.png").expect("13.png does not exist");
 
         // !! 3つのタイルがたまたま横並びになってるのでこれでよい
-        renderer.draw_image(
-            &self.image,
+        self.sheet.draw(
+            renderer,
             &Rect::new_from_x_y(
                 platform.frame.x.into(),
                 platform.frame.y.into(),
@@ -454,28 +428,17 @@ impl Obstacle for Platform {
     }
 
     fn right(&self) -> i16 {
-        self.bounding_boxes()
-            .last()
-            .map(|b| b.right())
-            .unwrap_or(0)
+        self.bounding_boxes().last().map(|b| b.right()).unwrap_or(0)
     }
 }
 
 impl Platform {
-    fn new(sheet: Sheet, image: HtmlImageElement, position: Point) -> Self {
-        Self {
-            sheet,
-            image,
-            position,
-        }
+    fn new(sheet: SpriteSheet, position: Point) -> Self {
+        Self { sheet, position }
     }
 
     fn destination_box(&self) -> Rect {
-        let platform = self
-            .sheet
-            .frames
-            .get("13.png")
-            .expect("13.png does not exist");
+        let platform = self.sheet.cell("13.png").expect("13.png does not exist");
 
         Rect::new(
             self.position,
