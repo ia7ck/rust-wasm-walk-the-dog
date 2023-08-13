@@ -233,9 +233,9 @@ impl KeyState {
     }
 }
 
-fn process_input(state: &mut KeyState, keyevent_reciever: &mut UnboundedReceiver<KeyPress>) {
+fn process_input(state: &mut KeyState, keyevent_receiver: &mut UnboundedReceiver<KeyPress>) {
     loop {
-        match keyevent_reciever.try_next() {
+        match keyevent_receiver.try_next() {
             Ok(None) | Err(_) => {
                 break;
             }
