@@ -26,8 +26,7 @@ pub enum WalkTheDog {
 pub struct Walk {
     boy: RedHatBoy,
     backgrounds: [Image; 2],
-    stone: Image,
-    platform: Platform,
+    obstacles: Vec<Box<dyn Obstacle>>,
 }
 
 pub struct RedHatBoy {
@@ -338,8 +337,10 @@ impl Game for WalkTheDog {
                             },
                         ),
                     ],
-                    stone: Image::new(stone, Point { x: 150, y: 546 }),
-                    platform,
+                    obstacles: vec![
+                        Box::new(Barrier::new(Image::new(stone, Point { x: 150, y: 546 }))),
+                        Box::new(platform),
+                    ],
                 })))
             }
             WalkTheDog::Loaded(_) => bail!("Error: Game is already initialized!"),
@@ -359,9 +360,8 @@ impl Game for WalkTheDog {
             }
             walk.boy.update();
 
-            walk.platform.position.x += walk.velocity();
-            walk.stone.move_horizontally(walk.velocity());
             let velocity = walk.velocity();
+
             let [first_background, second_background] = &mut walk.backgrounds;
             first_background.move_horizontally(velocity);
             second_background.move_horizontally(velocity);
@@ -372,23 +372,9 @@ impl Game for WalkTheDog {
                 second_background.set_x(first_background.right());
             }
 
-            for bounding_box in &walk.platform.bounding_boxes() {
-                if walk.boy.bounding_box().intersects(bounding_box) {
-                    if walk.boy.velocity_y() > 0 && walk.boy.pos_y() < walk.platform.position.y {
-                        // rhb が下降中 && rhb が platform より上にいる
-                        walk.boy.land_on(bounding_box.y());
-                    } else {
-                        walk.boy.knock_out();
-                    }
-                }
-            }
-
-            if walk
-                .boy
-                .bounding_box()
-                .intersects(&walk.stone.bounding_box())
-            {
-                walk.boy.knock_out();
+            for obstacle in &mut walk.obstacles {
+                obstacle.move_horizontally(velocity);
+                obstacle.check_intersection(&mut walk.boy);
             }
         }
     }
@@ -400,11 +386,8 @@ impl Game for WalkTheDog {
                 background.draw(renderer);
             }
             walk.boy.draw(renderer);
-            walk.stone.draw(renderer);
-            renderer.draw_rect(walk.stone.bounding_box());
-            walk.platform.draw(renderer);
-            for bounding_box in &walk.platform.bounding_boxes() {
-                renderer.draw_rect(&bounding_box);
+            for obstacle in &walk.obstacles {
+                obstacle.draw(renderer);
             }
         }
     }
@@ -416,10 +399,56 @@ impl Walk {
     }
 }
 
+pub trait Obstacle {
+    fn check_intersection(&self, boy: &mut RedHatBoy);
+    fn draw(&self, renderer: &Renderer);
+    fn move_horizontally(&mut self, x: i16);
+}
+
 struct Platform {
     sheet: Sheet,
     image: HtmlImageElement,
     position: Point,
+}
+
+impl Obstacle for Platform {
+    fn check_intersection(&self, boy: &mut RedHatBoy) {
+        if let Some(box_to_land_on) = self
+            .bounding_boxes()
+            .iter()
+            .find(|&bounding_box| boy.bounding_box().intersects(bounding_box))
+        {
+            if boy.velocity_y() > 0 && boy.pos_y() < self.position.y {
+                boy.land_on(box_to_land_on.y());
+            } else {
+                boy.knock_out();
+            }
+        }
+    }
+
+    fn draw(&self, renderer: &Renderer) {
+        let platform = self
+            .sheet
+            .frames
+            .get("13.png")
+            .expect("13.png does not exist");
+
+        // !! 3つのタイルがたまたま横並びになってるのでこれでよい
+        renderer.draw_image(
+            &self.image,
+            &Rect::new_from_x_y(
+                platform.frame.x.into(),
+                platform.frame.y.into(),
+                (platform.frame.w * 3).into(),
+                platform.frame.h.into(),
+            ),
+            &self.destination_box(),
+        );
+    }
+
+    fn move_horizontally(&mut self, x: i16) {
+        self.position.x += x;
+    }
 }
 
 impl Platform {
@@ -472,25 +501,31 @@ impl Platform {
             ),
         ]
     }
+}
+
+struct Barrier {
+    image: Image,
+}
+
+impl Barrier {
+    pub fn new(image: Image) -> Self {
+        Barrier { image }
+    }
+}
+
+impl Obstacle for Barrier {
+    fn check_intersection(&self, boy: &mut RedHatBoy) {
+        if boy.bounding_box().intersects(self.image.bounding_box()) {
+            boy.knock_out()
+        }
+    }
 
     fn draw(&self, renderer: &Renderer) {
-        let platform = self
-            .sheet
-            .frames
-            .get("13.png")
-            .expect("13.png does not exist");
+        self.image.draw(renderer);
+    }
 
-        // !! 3つのタイルがたまたま横並びになってるのでこれでよい
-        renderer.draw_image(
-            &self.image,
-            &Rect::new_from_x_y(
-                platform.frame.x.into(),
-                platform.frame.y.into(),
-                (platform.frame.w * 3).into(),
-                platform.frame.h.into(),
-            ),
-            &self.destination_box(),
-        );
+    fn move_horizontally(&mut self, x: i16) {
+        self.image.move_horizontally(x);
     }
 }
 
