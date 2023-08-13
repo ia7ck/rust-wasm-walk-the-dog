@@ -212,6 +212,10 @@ impl RedHatBoy {
         self.state_machine.context().velocity.y
     }
 
+    fn walking_speed(&self) -> i16 {
+        self.state_machine.context().velocity.x
+    }
+
     fn frame_name(&self) -> String {
         format!(
             "{} ({}).png",
@@ -345,6 +349,10 @@ impl Game for WalkTheDog {
             }
             walk.boy.update();
 
+            walk.platform.position.x += walk.velocity();
+            walk.stone.move_horizontally(walk.velocity());
+            walk.background.move_horizontally(walk.velocity());
+
             for bounding_box in &walk.platform.bounding_boxes() {
                 if walk.boy.bounding_box().intersects(bounding_box) {
                     if walk.boy.velocity_y() > 0 && walk.boy.pos_y() < walk.platform.position.y {
@@ -383,6 +391,12 @@ impl Game for WalkTheDog {
                 renderer.draw_rect(&bounding_box);
             }
         }
+    }
+}
+
+impl Walk {
+    fn velocity(&self) -> i16 {
+        -self.boy.walking_speed()
     }
 }
 
@@ -515,7 +529,6 @@ mod red_hat_boy_states {
                 self.velocity.y += GRAVITY;
             }
 
-            self.position.x += self.velocity.x;
             self.position.y += self.velocity.y;
 
             if self.position.y > FLOOR {
