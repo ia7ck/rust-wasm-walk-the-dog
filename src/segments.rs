@@ -8,7 +8,6 @@ use crate::{
 };
 
 const LOW_PLATFORM: i16 = 420;
-#[allow(unused)]
 const HIGH_PLATFORM: i16 = 375;
 const FIRST_PLATFORM: i16 = 370;
 
@@ -72,7 +71,7 @@ pub fn platform_and_stone(
             sprite_sheet,
             Point {
                 x: offset_x + INITIAL_PLATFORM_OFFSET,
-                y: LOW_PLATFORM,
+                y: HIGH_PLATFORM,
             },
         )),
         Box::new(Barrier::new(Image::new(
