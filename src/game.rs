@@ -249,7 +249,7 @@ impl RedHatBoy {
             &self.destination_box(),
         );
 
-        renderer.draw_rect(&&self.bounding_box());
+        renderer.draw_rect(&self.bounding_box());
     }
 
     fn update(&mut self) {
