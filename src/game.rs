@@ -458,6 +458,10 @@ impl Obstacle for Platform {
             );
             x += sprite.frame.w;
         }
+
+        for bounding_box in &self.bounding_boxes {
+            renderer.draw_rect(bounding_box);
+        }
     }
 
     fn move_horizontally(&mut self, x: i16) {
@@ -536,6 +540,8 @@ impl Obstacle for Barrier {
 
     fn draw(&self, renderer: &Renderer) {
         self.image.draw(renderer);
+
+        renderer.draw_rect(self.image.bounding_box());
     }
 
     fn move_horizontally(&mut self, x: i16) {
