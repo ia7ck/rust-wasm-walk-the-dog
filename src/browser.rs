@@ -1,12 +1,11 @@
-use anyhow::{anyhow, Result};
-use futures::Future;
-use wasm_bindgen::{
-    closure::{WasmClosure, WasmClosureFnOnce},
-    prelude::Closure,
+use ::anyhow::{anyhow, Result};
+use ::futures::Future;
+use ::wasm_bindgen::{
+    closure::{Closure, WasmClosure, WasmClosureFnOnce},
     JsCast, JsValue,
 };
-use wasm_bindgen_futures::JsFuture;
-use web_sys::{
+use ::wasm_bindgen_futures::JsFuture;
+use ::web_sys::{
     CanvasRenderingContext2d, Document, HtmlCanvasElement, HtmlImageElement, Response, Window,
 };
 

@@ -3,9 +3,10 @@ mod engine;
 mod game;
 mod segments;
 
+use ::wasm_bindgen::prelude::*;
+
 use engine::GameLoop;
 use game::WalkTheDog;
-use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen(start)]
 pub fn main_js() -> Result<(), JsValue> {

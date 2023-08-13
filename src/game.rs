@@ -1,9 +1,9 @@
-use std::rc::Rc;
+use ::std::rc::Rc;
 
-use anyhow::{anyhow, bail, Result};
-use async_trait::async_trait;
-use rand::{thread_rng, Rng};
-use web_sys::HtmlImageElement;
+use ::anyhow::{anyhow, bail, Result};
+use ::async_trait::async_trait;
+use ::rand::{thread_rng, Rng};
+use ::web_sys::HtmlImageElement;
 
 use crate::{
     browser,

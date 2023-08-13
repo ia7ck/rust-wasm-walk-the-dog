@@ -1,14 +1,14 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc, sync::Mutex};
+use ::std::{cell::RefCell, collections::HashMap, rc::Rc, sync::Mutex};
 
-use anyhow::{anyhow, Result};
-use async_trait::async_trait;
-use futures::channel::{
+use ::anyhow::{anyhow, Result};
+use ::async_trait::async_trait;
+use ::futures::channel::{
     mpsc::{unbounded, UnboundedReceiver},
     oneshot::channel,
 };
-use serde::Deserialize;
-use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
-use web_sys::{CanvasRenderingContext2d, HtmlImageElement};
+use ::serde::Deserialize;
+use ::wasm_bindgen::{closure::Closure, JsCast, JsValue};
+use ::web_sys::{CanvasRenderingContext2d, HtmlImageElement};
 
 use crate::browser::{self, LoopClosure};
 
