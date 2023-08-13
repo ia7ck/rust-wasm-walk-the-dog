@@ -6,24 +6,56 @@ use futures::channel::{
     mpsc::{unbounded, UnboundedReceiver},
     oneshot::channel,
 };
+use serde::Deserialize;
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use web_sys::{CanvasRenderingContext2d, HtmlImageElement};
 
 use crate::browser::{self, LoopClosure};
 
 pub struct Rect {
-    pub x: f32,
-    pub y: f32,
-    pub width: f32,
-    pub height: f32,
+    pub position: Point,
+    pub width: i16,
+    pub height: i16,
 }
 
 impl Rect {
+    pub const fn new(position: Point, width: i16, height: i16) -> Self {
+        Rect {
+            position,
+            width,
+            height,
+        }
+    }
+
+    pub const fn new_from_x_y(x: i16, y: i16, width: i16, height: i16) -> Self {
+        Rect::new(Point { x, y }, width, height)
+    }
+
     pub fn intersects(&self, other: &Self) -> bool {
-        self.x < other.x + other.width
-            && self.x + self.width > other.x
-            && self.y < other.y + other.height
-            && self.y + self.height > other.y
+        self.x() < other.right()
+            && self.right() > other.x()
+            && self.y() < other.bottom()
+            && self.bottom() > other.y()
+    }
+
+    pub fn right(&self) -> i16 {
+        self.x() + self.width
+    }
+
+    pub fn bottom(&self) -> i16 {
+        self.y() + self.height
+    }
+
+    pub fn x(&self) -> i16 {
+        self.position.x
+    }
+
+    pub fn y(&self) -> i16 {
+        self.position.y
+    }
+
+    pub fn set_x(&mut self, x: i16) {
+        self.position.x = x
     }
 }
 
@@ -34,8 +66,8 @@ pub struct Renderer {
 impl Renderer {
     pub fn clear(&self, rect: &Rect) {
         self.context.clear_rect(
-            rect.x.into(),
-            rect.y.into(),
+            rect.x().into(),
+            rect.y().into(),
             rect.width.into(),
             rect.height.into(),
         );
@@ -45,12 +77,12 @@ impl Renderer {
         self.context
             .draw_image_with_html_image_element_and_sw_and_sh_and_dx_and_dy_and_dw_and_dh(
                 &image,
-                frame.x.into(),
-                frame.y.into(),
+                frame.x().into(),
+                frame.y().into(),
                 frame.width.into(),
                 frame.height.into(),
-                destination.x.into(),
-                destination.y.into(),
+                destination.x().into(),
+                destination.y().into(),
                 destination.width.into(),
                 destination.height.into(),
             )
@@ -68,8 +100,8 @@ impl Renderer {
         self.context.set_stroke_style(&JsValue::from_str("#FF0000"));
         self.context.begin_path();
         self.context.rect(
-            bounding_box.x.into(),
-            bounding_box.y.into(),
+            bounding_box.x().into(),
+            bounding_box.y().into(),
             bounding_box.width.into(),
             bounding_box.height.into(),
         );
@@ -202,9 +234,9 @@ impl KeyState {
     }
 }
 
-fn process_input(state: &mut KeyState, keyevent_reciever: &mut UnboundedReceiver<KeyPress>) {
+fn process_input(state: &mut KeyState, keyevent_receiver: &mut UnboundedReceiver<KeyPress>) {
     loop {
-        match keyevent_reciever.try_next() {
+        match keyevent_receiver.try_next() {
             Ok(None) | Err(_) => {
                 break;
             }
@@ -226,31 +258,75 @@ pub struct Point {
 
 pub struct Image {
     element: HtmlImageElement,
-    position: Point,
-    bouding_box: Rect,
+    bounding_box: Rect,
 }
 
 impl Image {
     pub fn new(element: HtmlImageElement, position: Point) -> Self {
-        let bouding_box = Rect {
-            x: position.x.into(),
-            y: position.y.into(),
-            width: element.width() as f32,
-            height: element.height() as f32,
-        };
+        let bounding_box = Rect::new(position, element.width() as i16, element.height() as i16);
 
         Self {
             element,
-            position,
-            bouding_box,
+            bounding_box,
         }
     }
 
     pub fn draw(&self, context: &Renderer) {
-        context.draw_entire_image(&self.element, &self.position);
+        context.draw_entire_image(&self.element, &self.bounding_box.position);
     }
 
     pub fn bounding_box(&self) -> &Rect {
-        &self.bouding_box
+        &self.bounding_box
+    }
+
+    pub fn move_horizontally(&mut self, distance: i16) {
+        self.set_x(self.bounding_box.x() + distance);
+    }
+
+    pub fn set_x(&mut self, x: i16) {
+        self.bounding_box.set_x(x);
+    }
+
+    pub fn right(&self) -> i16 {
+        self.bounding_box.right()
+    }
+}
+
+pub struct SpriteSheet {
+    sheet: Sheet,
+    image: HtmlImageElement,
+}
+
+#[derive(Deserialize)]
+pub struct Sheet {
+    pub frames: HashMap<String, Cell>,
+}
+
+#[derive(Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Cell {
+    pub frame: SheetRect,
+    pub sprite_source_size: SheetRect,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct SheetRect {
+    pub x: i16,
+    pub y: i16,
+    pub w: i16,
+    pub h: i16,
+}
+
+impl SpriteSheet {
+    pub fn new(sheet: Sheet, image: HtmlImageElement) -> Self {
+        SpriteSheet { sheet, image }
+    }
+
+    pub fn cell(&self, name: &str) -> Option<&Cell> {
+        self.sheet.frames.get(name)
+    }
+
+    pub fn draw(&self, renderer: &Renderer, source: &Rect, destination: &Rect) {
+        renderer.draw_image(&self.image, source, destination);
     }
 }
