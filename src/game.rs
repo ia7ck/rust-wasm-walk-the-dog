@@ -38,7 +38,7 @@ pub struct RedHatBoy {
     image: HtmlImageElement,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 enum RedHatBoyStateMachine {
     Idle(RedHatBoyState<Idle>),
     Running(RedHatBoyState<Running>),
@@ -122,7 +122,7 @@ impl From<FallingEndState> for RedHatBoyStateMachine {
 
 impl RedHatBoyStateMachine {
     fn transition(self, event: Event) -> Self {
-        match (self, event) {
+        match (self.clone(), event) {
             (RedHatBoyStateMachine::Idle(state), Event::Run) => state.run().into(),
             (RedHatBoyStateMachine::Running(state), Event::Slide) => state.slide().into(),
             (RedHatBoyStateMachine::Running(state), Event::Jump) => state.jump().into(),
@@ -253,27 +253,27 @@ impl RedHatBoy {
     }
 
     fn update(&mut self) {
-        self.state_machine = self.state_machine.update();
+        self.state_machine = self.state_machine.clone().update();
     }
 
     fn run_right(&mut self) {
-        self.state_machine = self.state_machine.transition(Event::Run);
+        self.state_machine = self.state_machine.clone().transition(Event::Run);
     }
 
     fn slide(&mut self) {
-        self.state_machine = self.state_machine.transition(Event::Slide);
+        self.state_machine = self.state_machine.clone().transition(Event::Slide);
     }
 
     fn jump(&mut self) {
-        self.state_machine = self.state_machine.transition(Event::Jump);
+        self.state_machine = self.state_machine.clone().transition(Event::Jump);
     }
 
     fn knock_out(&mut self) {
-        self.state_machine = self.state_machine.transition(Event::KnockOut);
+        self.state_machine = self.state_machine.clone().transition(Event::KnockOut);
     }
 
     fn land_on(&mut self, position: i16) {
-        self.state_machine = self.state_machine.transition(Event::Land(position));
+        self.state_machine = self.state_machine.clone().transition(Event::Land(position));
     }
 }
 
@@ -578,13 +578,13 @@ mod red_hat_boy_states {
     const JUMPING_FRAME_NAME: &str = "Jump";
     const FALLING_FRAME_NAME: &str = "Dead";
 
-    #[derive(Copy, Clone)]
+    #[derive(Clone)]
     pub struct RedHatBoyState<S> {
         context: RedHatBoyContext,
         _state: S,
     }
 
-    #[derive(Copy, Clone)]
+    #[derive(Clone)]
     pub struct RedHatBoyContext {
         pub frame: u8,
         pub position: Point,
