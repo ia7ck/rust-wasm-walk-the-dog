@@ -11,6 +11,7 @@ use crate::{
     engine::{
         self, Audio, Cell, Game, Image, KeyState, Point, Rect, Renderer, Sheet, Sound, SpriteSheet,
     },
+    error,
     segments::{platform_and_stone, stone_and_platform},
 };
 
@@ -271,7 +272,9 @@ impl WalkTheDogState<GameOver> {
     }
 
     fn new_game(self) -> WalkTheDogState<Ready> {
-        browser::hide_ui();
+        if let Err(err) = browser::hide_ui() {
+            error!("Error hiding the browser {:#?}", err);
+        }
         WalkTheDogState {
             _state: Ready,
             walk: Walk::reset(self.walk),
@@ -791,6 +794,7 @@ impl Obstacle for Barrier {
 mod red_hat_boy_states {
     use crate::engine::{Audio, Point, Sound};
     use crate::game::HEIGHT;
+    use crate::log;
 
     const FLOOR: i16 = 479;
     const PLAYER_HEIGHT: i16 = HEIGHT - FLOOR;
@@ -878,7 +882,7 @@ mod red_hat_boy_states {
 
         fn play_jump_sound(self) -> Self {
             if let Err(err) = self.audio.play_sound(&self.jump_sound) {
-                web_sys::console::log_1(&format!("Error playing jump sound {:#?}", err).into());
+                log!("Error playing jump sound {:#?}", err);
             }
             self
         }
