@@ -249,7 +249,7 @@ impl WalkTheDogState<Walking> {
     fn end_game(self) -> WalkTheDogState<GameOver> {
         let receiver = browser::draw_ui("<button id='new_game'>New Game</button>")
             .and_then(|_unit| browser::find_html_element_by_id("new_game"))
-            .map(|element| engine::add_click_handler(element))
+            .map(engine::add_click_handler)
             .unwrap();
 
         WalkTheDogState {
@@ -435,7 +435,7 @@ impl From<SlidingEndState> for RedHatBoyStateMachine {
 
 impl From<RedHatBoyState<Jumping>> for RedHatBoyStateMachine {
     fn from(state: RedHatBoyState<Jumping>) -> Self {
-        RedHatBoyStateMachine::Jumping(state.into())
+        RedHatBoyStateMachine::Jumping(state)
     }
 }
 
@@ -512,12 +512,12 @@ impl RedHatBoyStateMachine {
 
     fn context(&self) -> &RedHatBoyContext {
         match self {
-            RedHatBoyStateMachine::Idle(state) => &state.context(),
-            RedHatBoyStateMachine::Running(state) => &state.context(),
-            RedHatBoyStateMachine::Sliding(state) => &state.context(),
-            RedHatBoyStateMachine::Jumping(state) => &state.context(),
-            RedHatBoyStateMachine::Falling(state) => &state.context(),
-            RedHatBoyStateMachine::KnockedOut(state) => &state.context(),
+            RedHatBoyStateMachine::Idle(state) => state.context(),
+            RedHatBoyStateMachine::Running(state) => state.context(),
+            RedHatBoyStateMachine::Sliding(state) => state.context(),
+            RedHatBoyStateMachine::Jumping(state) => state.context(),
+            RedHatBoyStateMachine::Falling(state) => state.context(),
+            RedHatBoyStateMachine::KnockedOut(state) => state.context(),
         }
     }
 
@@ -580,10 +580,10 @@ impl RedHatBoy {
         let sprite = self.current_sprite().expect("Cell not found");
 
         Rect::new_from_x_y(
-            (self.state_machine.context().position.x + sprite.sprite_source_size.x).into(),
-            (self.state_machine.context().position.y + sprite.sprite_source_size.y).into(),
-            sprite.frame.w.into(),
-            sprite.frame.h.into(),
+            self.state_machine.context().position.x + sprite.sprite_source_size.x,
+            self.state_machine.context().position.y + sprite.sprite_source_size.y,
+            sprite.frame.w,
+            sprite.frame.h,
         )
     }
 
@@ -607,10 +607,10 @@ impl RedHatBoy {
         renderer.draw_image(
             &self.image,
             &Rect::new_from_x_y(
-                sprite.frame.x.into(),
-                sprite.frame.y.into(),
-                sprite.frame.w.into(),
-                sprite.frame.h.into(),
+                sprite.frame.x,
+                sprite.frame.y,
+                sprite.frame.w,
+                sprite.frame.h,
             ),
             &self.destination_box(),
         );
@@ -748,7 +748,7 @@ impl Platform {
     }
 }
 
-fn rightmost(obstacle_list: &Vec<Box<dyn Obstacle>>) -> i16 {
+fn rightmost(obstacle_list: &[Box<dyn Obstacle>]) -> i16 {
     obstacle_list
         .iter()
         .map(|obstacle| obstacle.right())
@@ -1030,7 +1030,7 @@ mod red_hat_boy_states {
         pub fn update(mut self) -> JumpingEndState {
             self.context = self.context.update(JUMPING_FRAMES);
             if self.context.position.y >= FLOOR {
-                JumpingEndState::Complete(self.land_on(HEIGHT.into()))
+                JumpingEndState::Complete(self.land_on(HEIGHT))
             } else {
                 JumpingEndState::Jumping(self)
             }
