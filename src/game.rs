@@ -1,6 +1,6 @@
 use ::std::rc::Rc;
 
-use ::anyhow::{anyhow, bail, Result};
+use ::anyhow::{anyhow, Result};
 use ::async_trait::async_trait;
 use ::futures::channel::mpsc::UnboundedReceiver;
 use ::rand::{thread_rng, Rng};
