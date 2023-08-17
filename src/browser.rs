@@ -7,7 +7,8 @@ use ::wasm_bindgen::{
 };
 use ::wasm_bindgen_futures::JsFuture;
 use ::web_sys::{
-    CanvasRenderingContext2d, Document, HtmlCanvasElement, HtmlImageElement, Response, Window,
+    CanvasRenderingContext2d, Document, Element, HtmlCanvasElement, HtmlElement, HtmlImageElement,
+    Response, Window,
 };
 
 pub fn window() -> Result<Window> {
@@ -26,6 +27,11 @@ pub fn canvas() -> Result<HtmlCanvasElement> {
         .ok_or_else(|| anyhow!("No Canvas Element found with ID 'canvas'"))?
         .dyn_into::<web_sys::HtmlCanvasElement>()
         .map_err(|element| anyhow!("Error converting {:#?} to HtmlCanvasElement", element))
+        .and_then(|canvas_| {
+            // すぐにゲームを始められるようにしれっと focus しておく
+            canvas_.focus2()?;
+            Ok(canvas_)
+        })
 }
 
 pub fn context() -> Result<CanvasRenderingContext2d> {
@@ -117,4 +123,54 @@ pub fn now() -> Result<f64> {
         .performance()
         .ok_or_else(|| anyhow!("Performance object not found"))?
         .now())
+}
+
+pub fn draw_ui(html: &str) -> Result<()> {
+    find_ui()?
+        .insert_adjacent_html("afterbegin", html)
+        .map_err(|err| anyhow!("Could not insert html {:#?}", err))
+}
+
+pub fn hide_ui() -> Result<()> {
+    let ui = find_ui()?;
+
+    if let Some(child) = ui.first_child() {
+        ui.remove_child(&child)
+            .map(|_removed_child| ())
+            .map_err(|err| anyhow!("Failed to remove child {:#?}", err))
+            .and_then(|()| canvas()?.focus2())
+    } else {
+        Ok(())
+    }
+}
+
+fn find_ui() -> Result<Element> {
+    document().and_then(|doc| {
+        doc.get_element_by_id("ui")
+            .ok_or_else(|| anyhow!("UI element not found"))
+    })
+}
+
+pub fn find_html_element_by_id(id: &str) -> Result<HtmlElement> {
+    document()
+        .and_then(|doc| {
+            doc.get_element_by_id(id)
+                .ok_or_else(|| anyhow!("Element with id {} not found", id))
+        })
+        .and_then(|element| {
+            element
+                .dyn_into::<HtmlElement>()
+                .map_err(|err| anyhow!("Could not cast into HtmlElement {:#?}", err))
+        })
+}
+
+trait Focus {
+    fn focus2(&self) -> Result<()>;
+}
+
+impl Focus for HtmlElement {
+    fn focus2(&self) -> Result<()> {
+        self.focus()
+            .map_err(|err| anyhow!("Could not set focus to HtmlElement! {:#?}", err))
+    }
 }

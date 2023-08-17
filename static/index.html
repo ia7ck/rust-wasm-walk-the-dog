@@ -30,6 +30,10 @@
         background: -244px -60px url('Button.svg');
       }
 
+      #canvas {
+        outline: none;
+      }
+
       /* https://developer.mozilla.org/ja/docs/Web/HTML/Element/kbd */
       kbd {
         background-color: #eee;
@@ -47,10 +51,12 @@
         white-space: nowrap;
       }
     </style>
+    <link rel="preload" as="image" href="Button.svg">
+    <link rel="preload" as="font" href="kenney_future_narrow-webfont.woff2">
   </head>
   <body>
     <div id="ui">
-      <button>New Game</button>
+      <!-- New Game -->
     </div>
     <canvas id="canvas" tabindex="0" height="600" width="600">Your browser does not support the canvas.</canvas>
     <p>

@@ -2,6 +2,7 @@ use ::std::rc::Rc;
 
 use ::anyhow::{anyhow, bail, Result};
 use ::async_trait::async_trait;
+use ::futures::channel::mpsc::UnboundedReceiver;
 use ::rand::{thread_rng, Rng};
 use ::web_sys::HtmlImageElement;
 
@@ -36,8 +37,12 @@ struct WalkTheDogState<T> {
 }
 
 struct Ready;
+
 struct Walking;
-struct GameOver;
+
+struct GameOver {
+    new_game_event: UnboundedReceiver<()>,
+}
 
 pub struct Walk {
     obstacle_sheet: Rc<SpriteSheet>,
@@ -200,7 +205,7 @@ impl WalkTheDogState<Ready> {
 }
 
 impl WalkTheDogState<Walking> {
-    fn update(mut self, keystate: &KeyState) -> WalkTheDogState<Walking> {
+    fn update(mut self, keystate: &KeyState) -> WalkingEndState {
         if keystate.is_pressed("ArrowDown") {
             self.walk.boy.slide();
         }
@@ -234,13 +239,49 @@ impl WalkTheDogState<Walking> {
             self.walk.timeline += walking_speed;
         }
 
-        self
+        if self.walk.knocked_out() {
+            WalkingEndState::Complete(self.end_game())
+        } else {
+            WalkingEndState::Continue(self)
+        }
+    }
+
+    fn end_game(self) -> WalkTheDogState<GameOver> {
+        let receiver = browser::draw_ui("<button id='new_game'>New Game</button>")
+            .and_then(|_unit| browser::find_html_element_by_id("new_game"))
+            .map(|element| engine::add_click_handler(element))
+            .unwrap();
+
+        WalkTheDogState {
+            _state: GameOver {
+                new_game_event: receiver,
+            },
+            walk: self.walk,
+        }
     }
 }
 
 impl WalkTheDogState<GameOver> {
-    fn update(self) -> WalkTheDogState<GameOver> {
-        todo!()
+    fn update(mut self) -> GameOverEndState {
+        if self._state.new_game_pressed() {
+            GameOverEndState::Complete(self.new_game())
+        } else {
+            GameOverEndState::Continue(self)
+        }
+    }
+
+    fn new_game(self) -> WalkTheDogState<Ready> {
+        browser::hide_ui();
+        WalkTheDogState {
+            _state: Ready,
+            walk: Walk::reset(self.walk),
+        }
+    }
+}
+
+impl GameOver {
+    fn new_game_pressed(&mut self) -> bool {
+        matches!(self.new_game_event.try_next(), Ok(Some(())))
     }
 }
 
@@ -282,9 +323,56 @@ impl From<ReadyEndState> for WalkTheDogStateMachine {
     }
 }
 
+enum WalkingEndState {
+    Complete(WalkTheDogState<GameOver>),
+    Continue(WalkTheDogState<Walking>),
+}
+
+impl From<WalkingEndState> for WalkTheDogStateMachine {
+    fn from(state: WalkingEndState) -> Self {
+        match state {
+            WalkingEndState::Complete(game_over) => game_over.into(),
+            WalkingEndState::Continue(walking) => walking.into(),
+        }
+    }
+}
+
+enum GameOverEndState {
+    Complete(WalkTheDogState<Ready>),
+    Continue(WalkTheDogState<GameOver>),
+}
+
+impl From<GameOverEndState> for WalkTheDogStateMachine {
+    fn from(state: GameOverEndState) -> Self {
+        match state {
+            GameOverEndState::Complete(ready) => ready.into(),
+            GameOverEndState::Continue(game_over) => game_over.into(),
+        }
+    }
+}
+
 impl Walk {
+    fn reset(walk: Self) -> Self {
+        let starting_obstacles =
+            stone_and_platform(walk.stone.clone(), walk.obstacle_sheet.clone(), 0);
+        let timeline = rightmost(&starting_obstacles);
+
+        Walk {
+            boy: RedHatBoy::reset(walk.boy),
+            backgrounds: walk.backgrounds,
+            obstacles: starting_obstacles,
+            obstacle_sheet: walk.obstacle_sheet,
+            stone: walk.stone,
+            timeline,
+        }
+    }
+
     fn velocity(&self) -> i16 {
         -self.boy.walking_speed()
+    }
+
+    fn knocked_out(&self) -> bool {
+        self.boy.knocked_out()
     }
 
     fn generate_next_segment(&mut self) {
@@ -436,6 +524,10 @@ impl RedHatBoyStateMachine {
     fn update(self) -> Self {
         self.transition(Event::Update)
     }
+
+    fn knocked_out(&self) -> bool {
+        matches!(self, RedHatBoyStateMachine::KnockedOut(_))
+    }
 }
 
 impl RedHatBoy {
@@ -445,6 +537,15 @@ impl RedHatBoy {
             sprite_sheet: sheet,
             image,
         }
+    }
+
+    fn reset(boy: Self) -> Self {
+        RedHatBoy::new(
+            boy.sprite_sheet,
+            boy.image,
+            boy.state_machine.context().audio.clone(),
+            boy.state_machine.context().jump_sound.clone(),
+        )
     }
 
     fn pos_y(&self) -> i16 {
@@ -457,6 +558,10 @@ impl RedHatBoy {
 
     fn walking_speed(&self) -> i16 {
         self.state_machine.context().velocity.x
+    }
+
+    fn knocked_out(&self) -> bool {
+        self.state_machine.knocked_out()
     }
 
     fn frame_name(&self) -> String {
@@ -719,8 +824,8 @@ mod red_hat_boy_states {
         pub frame: u8,
         pub position: Point,
         pub velocity: Point,
-        audio: Audio,
-        jump_sound: Sound,
+        pub audio: Audio,
+        pub jump_sound: Sound,
     }
 
     impl RedHatBoyContext {
