@@ -4,6 +4,32 @@
     <meta charset="UTF-8">
     <title>Walk The Dog</title>
     <style>
+      #ui {
+        position: absolute;
+      }
+
+      @font-face {
+        font-family: 'Ken Future';
+        src: url('kenney_future_narrow-webfont.woff2');
+      }
+
+      button {
+        font-family: 'Ken Future';
+        background: -72px -60px url('Button.svg');
+        border: none;
+        width: 82px;
+        height: 33px;
+        transform: scale(1.8)  translate(150px, 100px);
+      }
+
+      button:hover {
+        background: -158px -60px url('Button.svg');
+      }
+
+      button:active {
+        background: -244px -60px url('Button.svg');
+      }
+
       /* https://developer.mozilla.org/ja/docs/Web/HTML/Element/kbd */
       kbd {
         background-color: #eee;
@@ -23,6 +49,9 @@
     </style>
   </head>
   <body>
+    <div id="ui">
+      <button>New Game</button>
+    </div>
     <canvas id="canvas" tabindex="0" height="600" width="600">Your browser does not support the canvas.</canvas>
     <p>
       <ul>
