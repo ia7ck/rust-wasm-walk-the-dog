@@ -391,3 +391,40 @@ pub fn add_click_handler(elem: HtmlElement) -> UnboundedReceiver<()> {
     on_click.forget();
     click_receiver
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn two_rects_that_intersect_on_the_left() {
+        let rect1 = Rect {
+            position: Point { x: 10, y: 10 },
+            height: 100,
+            width: 100,
+        };
+        let rect2 = Rect {
+            position: Point { x: 0, y: 10 },
+            height: 100,
+            width: 100,
+        };
+        // rect1 の左側, rect2 の右側が交差
+        assert_eq!(rect1.intersects(&rect2), true);
+    }
+
+    #[test]
+    fn two_rects_that_intersect_on_the_top() {
+        let rect1 = Rect {
+            position: Point { x: 10, y: 10 },
+            height: 100,
+            width: 100,
+        };
+        let rect2 = Rect {
+            position: Point { x: 10, y: 0 },
+            height: 100,
+            width: 100,
+        };
+        // rect1 の上側, rect2 の下側が交差
+        assert_eq!(rect1.intersects(&rect2), true);
+    }
+}
